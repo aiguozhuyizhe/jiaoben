@@ -1,0 +1,61 @@
+import  pymssql
+import  os
+import  win32gui
+import subprocess
+import  shutil
+import time
+while 1:
+    #数据库连接查询
+    server = "119.23.181.176"
+    user = "sa"
+    port = "985"
+    password = "(NoPainsNoGains2019)"
+    database = "OTCD"
+
+    conn = pymssql.connect(server, user, password, database, 0, 60, 'UTF-8', False, '', None, port)
+
+    cursor = conn.cursor()
+    ####获取ApiCallbackLog里面的以下字段，且按顺序
+    #商户ID，姓名，电话
+    cursor.execute('select FAppUserID,FRealName,FUserName from OTCD_User where  Ftype=1')
+    row = cursor.fetchall()
+    for i in row:
+        #自定义文件存放目录
+        mulu = 'F:\自动启exe'
+        file_list  = os.listdir(mulu)
+        #文件名为callbackAPI加上手机号
+        #标题为姓名加电话
+        file_name = "callbackAPI" + i[2]
+        classname = "TForm1"
+        titie = i[1] + i[2]
+
+        hwnd = win32gui.FindWindow(classname, titie)
+
+        #第一个if是表明目录中有且窗口打开情况下 不做操作
+        #第二个if表明目录中有但是窗口没打开即不小心×掉的情况判断后将窗口打开
+        #else是新入库数据，copy模板后更改config然后启动exe
+        if file_name in file_list and hwnd>0:
+           pass
+        elif file_name in file_list and hwnd==0:
+            #exe的路径
+            path = "F:\自动启exe\callbackAPI"+i[2]+"\CallBack_API.exe"
+            my_exe = subprocess.Popen(path)
+
+        else:
+            #path1是模板路径
+            #模板是callbackEXE文件其中的config.ini配置文件中没有user_id和decs两个参数，方便后续追加写入文件
+            path1 = "F:\自动启exe\callbackAPI" + i[2]
+            shutil.copytree('F:\自动启exe\callbackEXE', path1)
+
+            #config_path是配置文件路径
+            config_path = path1 + "\config.ini"
+            new_str1 = "ApiUserID=" + i[0]
+            new_str2 = "Desc=" + i[1] + i[2]
+            #以追加的方式写文件
+            with open(config_path, 'a+') as f:
+                f.write(new_str1 + "\n" + new_str2)
+                f.close()
+            path2 = "F:\自动启exe\callbackAPI" + i[2] + "\CallBack_API.exe"
+            my_exe = subprocess.Popen(path2)
+    row = cursor.fetchall()
+    time.sleep(600)
